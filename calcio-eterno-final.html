@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Calcio Eterno</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; font-family: system-ui; background: #070f09; }
+    body { overflow: hidden; }
+    
+    .screen { display: none; min-height: 100vh; background: #070f09; overflow-y: auto; padding: 20px 0 60px; }
+    .screen.active { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; }
+    .container { width: 100%; max-width: 420px; padding: 0 16px; }
+    
+    .title { font-family: 'Courier New', monospace; font-size: 40px; font-weight: 900; color: #c9a84c; letter-spacing: 7px; text-shadow: 0 0 40px #c9a84c44; line-height: 1.05; text-align: center; margin-bottom: 8px; }
+    .subtitle { font-family: monospace; font-size: 9px; letter-spacing: 8px; color: #2a6040; text-align: center; margin-bottom: 40px; }
+    .label { font-family: monospace; font-size: 9px; letter-spacing: 3px; color: #c9a84c88; margin-bottom: 10px; text-align: center; }
+    .section { margin-bottom: 20px; }
+    
+    .btn { display: block; width: 100%; background: #c9a84c; color: #0a1409; border: none; border-radius: 8px; padding: 14px 0; font-family: monospace; font-size: 13px; font-weight: 900; letter-spacing: 3px; cursor: pointer; margin-bottom: 8px; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn.secondary { background: transparent; border: 1.5px solid #1e3c24; color: #6a8a70; }
+    
+    input { width: 100%; background: #0d1c10; border: 1.5px solid #1e3c24; border-radius: 8px; padding: 12px 14px; font-family: 'Courier New', monospace; font-size: 14px; color: #f0ede6; letter-spacing: 1px; outline: none; }
+    
+    .formations { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+    .formation-btn { font-family: monospace; font-size: 13px; letter-spacing: 1px; padding: 8px 14px; border-radius: 6px; cursor: pointer; border: 1.5px solid #1e3c24; background: #0d1c10; color: #c9a84c; font-weight: 600; }
+    .formation-btn.active { background: #c9a84c; color: #0a1409; border-color: #c9a84c; font-weight: 900; }
+    
+    .card-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 14px; }
+    .card-wrapper { aspect-ratio: 1; cursor: pointer; }
+    .card-wrapper.revealed .card-inner { transform: rotateY(180deg); }
+    
+    .card-inner { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; transition: transform 0.52s cubic-bezier(.3,1.3,.5,1); }
+    .card-face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border-radius: 8px; display: flex; flex-direction: column; padding: 6px; }
+    .card-back { background: linear-gradient(145deg,#152518,#0a1a0c); border: 1.5px solid #1e3c24; align-items: center; justify-content: center; font-size: 20px; color: #6a8a70; }
+    .card-front { transform: rotateY(180deg); background: linear-gradient(160deg,#162219 0%,#0a1409 100%); }
+    
+    .flex-row { display: flex; gap: 8px; }
+    .flex-1 { flex: 1; }
+    .flex-2 { flex: 2; }
+    
+    .info { text-align: center; font-size: 10px; color: #6a8a70; font-family: monospace; letter-spacing: 2px; margin-top: 14px; }
+    
+    .head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+    .head-left { }
+    .head-right { text-align: right; }
+    .formation-label { font-family: monospace; font-size: 9px; color: #c9a84c88; letter-spacing: 2px; }
+    .team-name { font-family: 'Courier New', monospace; font-size: 15px; font-weight: 800; color: #f0ede6; }
+    .carte-label { font-family: monospace; font-size: 9px; color: #6a8a70; letter-spacing: 2px; }
+    .carte-count { font-family: monospace; font-size: 24px; font-weight: 900; color: #c9a84c; }
+    .carte-count-sub { font-size: 12px; color: #c9a84c55; }
+  </style>
+</head>
+<body>
+  <!-- SETUP SCREEN -->
+  <div id="setupScreen" class="screen active">
+    <div class="container">
+      <div class="title">CALCIO<br/>ETERNO</div>
+      <div class="subtitle">DRAFT MODE</div>
+      
+      <div class="section">
+        <div class="label">MODULO</div>
+        <div class="formations" id="formationBtns"></div>
+      </div>
+
+      <div class="section">
+        <div class="label">NOME SQUADRA</div>
+        <input id="teamNameInput" type="text" placeholder="es. Vecchia Signora FC" maxlength="24"/>
+      </div>
+
+      <button class="btn" onclick="goToDraft()">INIZIA DRAFT ⚽</button>
+      <div class="info">290 ROSE · 41 STAGIONI · 5220 GIOCATORI</div>
+    </div>
+  </div>
+
+  <!-- DRAFT SCREEN -->
+  <div id="draftScreen" class="screen">
+    <div class="container">
+      <div class="head">
+        <div class="head-left">
+          <div class="formation-label" id="formationDisplay">4-3-3</div>
+          <div class="team-name" id="teamNameDisplay">La mia squadra</div>
+        </div>
+        <div class="head-right">
+          <div class="carte-label">CARTE</div>
+          <div class="carte-count"><span id="revealedCount">0</span><span class="carte-count-sub">/11</span></div>
+        </div>
+      </div>
+
+      <div class="card-grid" id="cardGrid"></div>
+
+      <div id="draftControls"></div>
+      <div id="resultSection"></div>
+    </div>
+  </div>
+
+  <script>
+    const PLAYERS = [
+      { name:"Gianluigi Buffon", roles:["POR"], overall:92, team:"Juventus", season:"2002/03", badge:"⚫⚪" },
+      { name:"Dida", roles:["POR"], overall:88, team:"AC Milan", season:"2002/03", badge:"🔴⚫" },
+      { name:"Julio Cesar", roles:["POR"], overall:90, team:"Inter", season:"2009/10", badge:"🔵⚫" },
+      { name:"Mike Maignan", roles:["POR"], overall:89, team:"AC Milan", season:"2022/23", badge:"🔴⚫" },
+      { name:"Alex Meret", roles:["POR"], overall:84, team:"Napoli", season:"2024/25", badge:"🔵⚪" },
+      { name:"Franco Baresi", roles:["DC"], overall:93, team:"AC Milan", season:"1991/92", badge:"🔴⚫" },
+      { name:"Paolo Maldini", roles:["TS","DC"], overall:93, team:"AC Milan", season:"1993/94", badge:"🔴⚫" },
+      { name:"Alessandro Nesta", roles:["DC"], overall:93, team:"Lazio", season:"2000/01", badge:"🔵⚪" },
+      { name:"Fabio Cannavaro", roles:["DC"], overall:90, team:"Juventus", season:"2004/05", badge:"⚫⚪" },
+      { name:"Thiago Silva", roles:["DC"], overall:90, team:"AC Milan", season:"2010/11", badge:"🔴⚫" },
+      { name:"Giorgio Chiellini", roles:["DC"], overall:89, team:"Juventus", season:"2017/18", badge:"⚫⚪" },
+      { name:"Koulibaly", roles:["DC"], overall:89, team:"Napoli", season:"2018/19", badge:"🔵⚪" },
+      { name:"Bastoni", roles:["DC","TS"], overall:89, team:"Inter", season:"2024/25", badge:"🔵⚫" },
+      { name:"Leonardo Bonucci", roles:["DC"], overall:88, team:"Juventus", season:"2016/17", badge:"⚫⚪" },
+      { name:"Skriniar", roles:["DC"], overall:88, team:"Inter", season:"2023/24", badge:"🔵⚫" },
+      { name:"Lilian Thuram", roles:["TD","DC"], overall:91, team:"Parma", season:"1998/99", badge:"🟡🔵" },
+      { name:"Maicon", roles:["TD"], overall:92, team:"Inter", season:"2009/10", badge:"🔵⚫" },
+      { name:"Cafu", roles:["TD"], overall:89, team:"AC Milan", season:"2001/02", badge:"🔴⚫" },
+      { name:"Bellanova", roles:["TD"], overall:82, team:"Atalanta", season:"2024/25", badge:"🔵⚫" },
+      { name:"Theo Hernandez", roles:["TS"], overall:88, team:"AC Milan", season:"2022/23", badge:"🔴⚫" },
+      { name:"Alex Sandro", roles:["TS"], overall:86, team:"Juventus", season:"2015/16", badge:"⚫⚪" },
+      { name:"Michel Platini", roles:["TR","CC"], overall:95, team:"Juventus", season:"1984/85", badge:"⚫⚪" },
+      { name:"Zinedine Zidane", roles:["TR","CC"], overall:95, team:"Juventus", season:"1999/00", badge:"⚫⚪" },
+      { name:"Lothar Matthaus", roles:["CC","CDC"], overall:94, team:"Inter", season:"1989/90", badge:"🔵⚫" },
+      { name:"Kakà", roles:["TR","ATT"], overall:94, team:"AC Milan", season:"2006/07", badge:"🔴⚫" },
+      { name:"Wesley Sneijder", roles:["TR","CC"], overall:92, team:"Inter", season:"2009/10", badge:"🔵⚫" },
+      { name:"Andrea Pirlo", roles:["CDC","TR"], overall:91, team:"AC Milan", season:"2006/07", badge:"🔴⚫" },
+      { name:"Barella", roles:["CC","CDC"], overall:90, team:"Inter", season:"2024/25", badge:"🔵⚫" },
+      { name:"Arturo Vidal", roles:["CC","CDC"], overall:90, team:"Juventus", season:"2013/14", badge:"⚫⚪" },
+      { name:"Edgar Davids", roles:["CDC","CC"], overall:88, team:"Juventus", season:"1997/98", badge:"⚫⚪" },
+      { name:"Ronaldo R9", roles:["ATT","PC"], overall:97, team:"Inter", season:"1997/98", badge:"🔵⚫" },
+      { name:"Diego Maradona", roles:["ATT","TR"], overall:97, team:"Napoli", season:"1987/88", badge:"🔵⚪" },
+      { name:"Cristiano Ronaldo", roles:["ATT","PC"], overall:95, team:"Juventus", season:"2018/19", badge:"⚫⚪" },
+      { name:"Andriy Shevchenko", roles:["ATT","PC"], overall:93, team:"AC Milan", season:"2003/04", badge:"🔴⚫" },
+      { name:"Zlatan Ibrahimovic", roles:["PC","ATT"], overall:92, team:"AC Milan", season:"2010/11", badge:"🔴⚫" },
+      { name:"Lautaro Martinez", roles:["ATT","PC"], overall:91, team:"Inter", season:"2024/25", badge:"🔵⚫" },
+      { name:"Roberto Baggio", roles:["ATT","TR"], overall:91, team:"Juventus", season:"1994/95", badge:"⚫⚪" },
+      { name:"Alessandro Del Piero", roles:["ATT","TR"], overall:91, team:"Juventus", season:"2000/01", badge:"⚫⚪" },
+      { name:"Victor Osimhen", roles:["PC","ATT"], overall:91, team:"Napoli", season:"2022/23", badge:"🔵⚪" },
+      { name:"Immobile", roles:["ATT","PC"], overall:91, team:"Lazio", season:"2019/20", badge:"🔵⚪" },
+      { name:"Kvaratskhelia", roles:["ALA","ATT"], overall:91, team:"Napoli", season:"2022/23", badge:"🔵⚪" },
+      { name:"Carlos Tevez", roles:["ATT","PC"], overall:91, team:"Juventus", season:"2013/14", badge:"⚫⚪" },
+      { name:"Gonzalo Higuain", roles:["PC"], overall:90, team:"Napoli", season:"2015/16", badge:"🔵⚪" },
+      { name:"Paulo Dybala", roles:["ATT","TR"], overall:89, team:"Juventus", season:"2018/19", badge:"⚫⚪" },
+      { name:"Rafael Leao", roles:["ATT","ALA"], overall:88, team:"AC Milan", season:"2022/23", badge:"🔴⚫" },
+      { name:"Retegui", roles:["PC"], overall:88, team:"Atalanta", season:"2024/25", badge:"🔵⚫" },
+      { name:"Vlahovic", roles:["PC"], overall:87, team:"Fiorentina", season:"2021/22", badge:"🟣" },
+    ];
+
+    const FORMATIONS = {
+      "4-3-3":   ["POR","TD","DC","DC","TS","CC","CDC","CC","ALA","ATT","ALA"],
+      "4-4-2":   ["POR","TD","DC","DC","TS","ALA","CC","CC","ALA","PC","PC"],
+      "4-2-3-1": ["POR","TD","DC","DC","TS","CDC","CDC","ALA","TR","ALA","PC"],
+      "3-5-2":   ["POR","DC","DC","DC","TD","CC","CDC","CC","TS","PC","PC"],
+      "3-4-3":   ["POR","DC","DC","DC","TD","CC","CC","TS","ALA","ATT","ALA"],
+    };
+
+    const pick = a => a[Math.floor(Math.random() * a.length)];
+    
+    let state = {
+      formation: "4-3-3",
+      teamName: "",
+      players: [],
+      revealed: 0,
+    };
+
+    function draftTeam(fk) {
+      const used = new Set();
+      return FORMATIONS[fk].map(role => {
+        const pool = PLAYERS.filter(p => p.roles.includes(role) && !used.has(p.name + p.season));
+        if (!pool.length) return { name:"N/D", roles:[role], overall:60, team:"—", season:"—", badge:"", slotRole:role };
+        const p = pick(pool);
+        used.add(p.name + p.season);
+        return { ...p, slotRole: role };
+      });
+    }
+
+    function ovrColor(v) {
+      if (v >= 92) return "#f5c842";
+      if (v >= 86) return "#e8a020";
+      if (v >= 80) return "#7ecb85";
+      if (v >= 74) return "#6ab4e8";
+      return "#909090";
+    }
+
+    function ovrLabel(v) {
+      if (v >= 92) return "ICONA";
+      if (v >= 86) return "ELITE";
+      if (v >= 80) return "SOLIDO";
+      return "BUONO";
+    }
+
+    // SETUP
+    function initSetup() {
+      const btns = document.getElementById("formationBtns");
+      btns.innerHTML = Object.keys(FORMATIONS).map(f => 
+        `<button class="formation-btn ${state.formation === f ? 'active' : ''}" onclick="setFormation('${f}')">${f}</button>`
+      ).join("");
+    }
+
+    function setFormation(f) {
+      state.formation = f;
+      document.querySelectorAll(".formation-btn").forEach(b => b.classList.remove("active"));
+      event.target.classList.add("active");
+    }
+
+    function goToDraft() {
+      const input = document.getElementById("teamNameInput");
+      if (!input.value.trim()) {
+        input.focus();
+        return;
+      }
+      state.teamName = input.value;
+      state.players = draftTeam(state.formation);
+      state.revealed = 0;
+      
+      document.getElementById("setupScreen").classList.remove("active");
+      document.getElementById("draftScreen").classList.add("active");
+      
+      renderDraft();
+    }
+
+    function renderDraft() {
+      document.getElementById("formationDisplay").textContent = state.formation;
+      document.getElementById("teamNameDisplay").textContent = state.teamName;
+      document.getElementById("revealedCount").textContent = state.revealed;
+
+      const grid = document.getElementById("cardGrid");
+      grid.innerHTML = state.players.map((p, i) => {
+        const col = ovrColor(p.overall);
+        const revealed = i < state.revealed;
+        return `
+          <div class="card-wrapper ${revealed ? 'revealed' : ''}">
+            <div class="card-inner">
+              <div class="card-face card-back">⚽</div>
+              <div class="card-face card-front" style="border: 1.5px solid ${col}44;">
+                <div style="display:flex;justify-content:space-between;margin-bottom:2px;font-size:7px;font-family:monospace;">
+                  <span style="color:#c9a84c;background:#c9a84c18;padding:1px 4px;border-radius:3px;">${p.season}</span>
+                  <span style="font-size:9px;">${p.badge}</span>
+                </div>
+                <div style="text-align:center;font-family:'Courier New',monospace;font-size:32px;font-weight:900;color:${col};text-shadow:0 0 16px ${col}66;">
+                  ${revealed ? p.overall : '–'}
+                </div>
+                <div style="text-align:center;font-size:6px;font-family:monospace;letter-spacing:2px;color:${col}99;margin-bottom:3px;">${ovrLabel(p.overall)}</div>
+                <div style="height:1px;background:${col}28;margin-bottom:4px;"/>
+                <div style="text-align:center;font-family:'Courier New',monospace;font-size:${p.name.length > 18 ? 8 : 10}px;font-weight:700;color:#f0ede6;margin-bottom:2px;">${p.name.toUpperCase()}</div>
+                <div style="text-align:center;font-size:7px;color:#c9a84c;font-family:monospace;margin-bottom:4px;">${p.team}</div>
+                <div style="margin-top:auto;text-align:center;">
+                  <span style="display:inline-block;padding:1px 7px;background:${col}18;border:1px solid ${col}44;border-radius:3px;font-size:8px;font-family:monospace;font-weight:700;color:${col};letter-spacing:2px;">${p.slotRole}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      const controls = document.getElementById("draftControls");
+      if (state.revealed < 11) {
+        controls.innerHTML = `
+          <div class="flex-row">
+            <button class="btn" onclick="revealNext()">ESTRAI #${state.revealed + 1}</button>
+            ${state.revealed > 0 ? `<button class="btn secondary" onclick="revealAll()" style="flex: 0 0 auto; padding: 0 16px; width: auto; margin-bottom: 0;">TUTTE</button>` : ""}
+          </div>
+        `;
+        document.getElementById("resultSection").innerHTML = "";
+      } else {
+        const ovr = Math.round(state.players.reduce((s, p) => s + p.overall, 0) / state.players.length);
+        const col = ovrColor(ovr);
+        controls.innerHTML = "";
+        document.getElementById("resultSection").innerHTML = `
+          <div style="text-align:center;padding:14px 0;border-top:1px solid #1e3c24;border-bottom:1px solid #1e3c24;margin-bottom:14px;">
+            <div style="font-family:monospace;font-size:9px;letter-spacing:3px;color:#6a8a70;margin-bottom:2px;">OVERALL SQUADRA</div>
+            <div style="font-family:'Courier New',monospace;font-size:58px;font-weight:900;color:${col};text-shadow:0 0 30px ${col}77;line-height:1;">${ovr}</div>
+            <div style="font-size:9px;font-family:monospace;letter-spacing:3px;color:${col}99;margin-top:2px;">${ovrLabel(ovr)}</div>
+          </div>
+          <div class="flex-row">
+            <button class="btn secondary" style="flex:1;" onclick="goToSetup()">NUOVO</button>
+            <button class="btn" style="flex:2;" onclick="alert('Match engine coming soon!')">GIOCA ▶</button>
+          </div>
+        `;
+      }
+    }
+
+    function revealNext() {
+      state.revealed = Math.min(state.revealed + 1, 11);
+      renderDraft();
+    }
+
+    function revealAll() {
+      state.revealed = 11;
+      renderDraft();
+    }
+
+    function goToSetup() {
+      state.revealed = 0;
+      state.players = [];
+      document.getElementById("draftScreen").classList.remove("active");
+      document.getElementById("setupScreen").classList.add("active");
+    }
+
+    initSetup();
+  </script>
+</body>
+</html>
